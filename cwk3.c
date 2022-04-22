@@ -102,11 +102,40 @@ int main( int argc, char **argv )
         &newGrid_buffer
     );
 
+    //add work size
+    // Set up the global problem size, and the work group size.
+	size_t indexSpaceSize[1], workGroupSize[1];
+	indexSpaceSize[0] = N * N;
+	workGroupSize [0] = 128;				// Should match to hardware; can be too large!
+
+
+    //enqueue
     status = clEnqueueNDRangeKernel(
-        
+        queue,
+        kernel,
+        1,
+        NULL,
+        indexSpaceSize,
+        workGroupSize,
+        0,
+        NULL,
+        NULL
     );
 
-    clReleaseKernel(kernel);
+    //todo: error handling
+
+    status = clEnqueueReadBuffer(
+        queue,
+        newGrid_buffer,
+        CL_TRUE,
+        0,
+        N * N * sizeof(float),
+        newGrid,
+        0,
+        NULL,
+        NULL
+    );
+
     // overwrite hostgrid with newgrid
 
     //
@@ -118,10 +147,16 @@ int main( int argc, char **argv )
     //
     // Release all resources.
     //
+
+    clReleaseMemObject(hostGrid_buffer);
+    clReleaseMemObject(newGrid_buffer);
+    
+    clReleaseKernel(kernel);
     clReleaseCommandQueue( queue   );
     clReleaseContext     ( context );
 
     free( hostGrid );
+    free( newGrid );
 
     return EXIT_SUCCESS;
 }
