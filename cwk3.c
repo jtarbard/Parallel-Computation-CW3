@@ -50,6 +50,7 @@ int main( int argc, char **argv )
 
     // Allocate memory for the grid. For simplicity, this uses a one-dimensional array.
 	float *hostGrid = (float*) malloc( N * N * sizeof(float) );
+	float *newGrid = (float*) malloc( N * N * sizeof(float) );
 
 	// Fill the grid with some initial values, and display to stdout. fillGrid() is defined in the helper file.
     fillGrid( hostGrid, N );
@@ -61,6 +62,81 @@ int main( int argc, char **argv )
 	//
 
 	// Your solution should primarily go here.
+    
+    // send hostGrid, newGrid to gpu
+    cl_mem hostGrid_buffer = clCreateBuffer(
+        context,
+        CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
+        N * N * sizeof(float),
+        hostGrid,
+        &status
+    );
+
+    cl_mem newGrid_buffer = clCreateBuffer(
+        context,
+        CL_MEM_WRITE_ONLY|CL_MEM_COPY_HOST_PTR,
+        N * N * sizeof(float),
+        newGrid,
+        &status
+    );
+    
+    // Compile Kernal from file with kernal args
+    cl_kernel kernel = compileKernelFromFile(
+        "cwk3.cl",
+        "test",
+        context,
+        device
+    );
+
+    status = clSetKernalArg(
+        kernel,
+        0,
+        N * N * sizeof(float),
+        &hostGrid_buffer
+    );
+
+    status = clSetKernalArg(
+        kernel,
+        1,
+        N * N * sizeof(float),
+        &newGrid_buffer
+    );
+
+    //add work size
+    // Set up the global problem size, and the work group size.
+	size_t indexSpaceSize[1], workGroupSize[1];
+	indexSpaceSize[0] = N * N;
+	workGroupSize [0] = 128;				// Should match to hardware; can be too large!
+
+
+    //enqueue
+    status = clEnqueueNDRangeKernel(
+        queue,
+        kernel,
+        1,
+        NULL,
+        indexSpaceSize,
+        workGroupSize,
+        0,
+        NULL,
+        NULL
+    );
+
+    //todo: error handling
+
+    status = clEnqueueReadBuffer(
+        queue,
+        newGrid_buffer,
+        CL_TRUE,
+        0,
+        N * N * sizeof(float),
+        newGrid,
+        0,
+        NULL,
+        NULL
+    );
+
+    // overwrite hostgrid with newgrid
 
     //
     // Display the final result. This assumes that the iterated grid was copied back to the hostGrid array.
@@ -71,10 +147,16 @@ int main( int argc, char **argv )
     //
     // Release all resources.
     //
+
+    clReleaseMemObject(hostGrid_buffer);
+    clReleaseMemObject(newGrid_buffer);
+    
+    clReleaseKernel(kernel);
     clReleaseCommandQueue( queue   );
     clReleaseContext     ( context );
 
     free( hostGrid );
+    free( newGrid );
 
     return EXIT_SUCCESS;
 }
