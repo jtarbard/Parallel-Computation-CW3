@@ -88,7 +88,7 @@ int main( int argc, char **argv )
     // Compile Kernal from file with kernal args
     cl_kernel kernel = compileKernelFromFile(
         "cwk3.cl",
-        "test",
+        "heat",
         context,
         device
     );

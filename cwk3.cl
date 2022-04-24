@@ -1,6 +1,6 @@
 // Kernel for the heat equation.
 __kernel
-void test(__constant int *Np, __constant float *hostGrid, __global float *newGrid)
+void heat(__constant int *Np, __constant float *hostGrid, __global float *newGrid)
 {
 
     int i = get_global_id(0); 
