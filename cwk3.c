@@ -60,7 +60,15 @@ int main( int argc, char **argv )
 	//
 	// Allocate memory for the grid on the GPU and apply the heat equation as per the instructions.
 	//
-    
+
+    cl_mem N_buffer = clCreateBuffer(
+        context,
+        CL_MEM_READ_ONLY,
+        sizeof(int),
+        &N,
+        &status
+    );
+
     cl_mem hostGrid_buffer = clCreateBuffer(
         context,
         CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
@@ -89,12 +97,19 @@ int main( int argc, char **argv )
         kernel,
         0,
         sizeof(cl_mem),
-        &hostGrid_buffer
+        &N_buffer
     );
 
     status = clSetKernelArg(
         kernel,
         1,
+        sizeof(cl_mem),
+        &hostGrid_buffer
+    );
+
+    status = clSetKernelArg(
+        kernel,
+        2,
         sizeof(cl_mem),
         &newGrid_buffer
     );
@@ -155,6 +170,7 @@ int main( int argc, char **argv )
     // Release all resources.
     //
 
+    clReleaseMemObject( N_buffer );
     clReleaseMemObject( hostGrid_buffer );
     clReleaseMemObject( newGrid_buffer );
     
