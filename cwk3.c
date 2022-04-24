@@ -61,9 +61,14 @@ int main( int argc, char **argv )
 	// Allocate memory for the grid on the GPU and apply the heat equation as per the instructions.
 	//
 
-	// Your solution should primarily go here.
-    
-    // send hostGrid, newGrid to gpu
+    cl_mem N_buffer = clCreateBuffer(
+        context,
+        CL_MEM_READ_ONLY,
+        sizeof(int),
+        &N,
+        &status
+    );
+
     cl_mem hostGrid_buffer = clCreateBuffer(
         context,
         CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
@@ -74,31 +79,38 @@ int main( int argc, char **argv )
 
     cl_mem newGrid_buffer = clCreateBuffer(
         context,
-        CL_MEM_WRITE_ONLY|CL_MEM_COPY_HOST_PTR,
+        CL_MEM_WRITE_ONLY,
         N * N * sizeof(float),
-        newGrid,
+        NULL,
         &status
     );
     
     // Compile Kernal from file with kernal args
     cl_kernel kernel = compileKernelFromFile(
         "cwk3.cl",
-        "test",
+        "heat",
         context,
         device
     );
 
-    status = clSetKernalArg(
+    status = clSetKernelArg(
         kernel,
         0,
-        N * N * sizeof(float),
+        sizeof(cl_mem),
+        &N_buffer
+    );
+
+    status = clSetKernelArg(
+        kernel,
+        1,
+        sizeof(cl_mem),
         &hostGrid_buffer
     );
 
-    status = clSetKernalArg(
+    status = clSetKernelArg(
         kernel,
-        1,
-        N * N * sizeof(float),
+        2,
+        sizeof(cl_mem),
         &newGrid_buffer
     );
 
@@ -106,7 +118,7 @@ int main( int argc, char **argv )
     // Set up the global problem size, and the work group size.
 	size_t indexSpaceSize[1], workGroupSize[1];
 	indexSpaceSize[0] = N * N;
-	workGroupSize [0] = 128;				// Should match to hardware; can be too large!
+	workGroupSize [0] = N;				// Should match to hardware; can be too large!
 
 
     //enqueue
@@ -122,6 +134,12 @@ int main( int argc, char **argv )
         NULL
     );
 
+    if (status != CL_SUCCESS)
+    {
+		printf( "Failure enqueuing kernel: Error %d.\n", status );
+		return EXIT_FAILURE;
+	}
+
     //todo: error handling
 
     status = clEnqueueReadBuffer(
@@ -130,13 +148,17 @@ int main( int argc, char **argv )
         CL_TRUE,
         0,
         N * N * sizeof(float),
-        newGrid,
+        hostGrid,
         0,
         NULL,
         NULL
     );
 
-    // overwrite hostgrid with newgrid
+	if( status != CL_SUCCESS )
+	{
+		printf( "Could not copy device data to host: Error %d.\n", status );
+		return EXIT_FAILURE;
+	}
 
     //
     // Display the final result. This assumes that the iterated grid was copied back to the hostGrid array.
@@ -148,15 +170,15 @@ int main( int argc, char **argv )
     // Release all resources.
     //
 
-    clReleaseMemObject(hostGrid_buffer);
-    clReleaseMemObject(newGrid_buffer);
+    clReleaseMemObject( N_buffer );
+    clReleaseMemObject( hostGrid_buffer );
+    clReleaseMemObject( newGrid_buffer );
     
-    clReleaseKernel(kernel);
+    clReleaseKernel( kernel );
     clReleaseCommandQueue( queue   );
     clReleaseContext     ( context );
 
     free( hostGrid );
-    free( newGrid );
 
     return EXIT_SUCCESS;
 }
