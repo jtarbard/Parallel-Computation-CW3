@@ -63,7 +63,7 @@ int main( int argc, char **argv )
 
     cl_mem N_buffer = clCreateBuffer(
         context,
-        CL_MEM_READ_ONLY,
+        CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
         sizeof(int),
         &N,
         &status
@@ -114,12 +114,32 @@ int main( int argc, char **argv )
         &newGrid_buffer
     );
 
-    //add work size
-    // Set up the global problem size, and the work group size.
-	size_t indexSpaceSize[1], workGroupSize[1];
-	indexSpaceSize[0] = N * N;
-	workGroupSize [0] = N;				// Should match to hardware; can be too large!
+    if (status != CL_SUCCESS)
+    {
+		printf( "Failure setting arguments: Error %d.\n", status );
+		return EXIT_FAILURE;
+	}
 
+    // Set up the global problem size, and the work group size.
+	size_t maxWorkItems, indexSpaceSize[1], workGroupSize[1];
+
+    clGetDeviceInfo( 
+        device, 
+        CL_DEVICE_MAX_WORK_GROUP_SIZE, 
+        sizeof ( size_t ), 
+        &maxWorkItems, 
+        NULL 
+    );
+
+    indexSpaceSize[0] = N * N;
+    if (N > maxWorkItems)
+    {
+	    workGroupSize[0] = maxWorkItems;
+    }
+    else
+    {
+	    workGroupSize[0] = N;
+    }
 
     //enqueue
     status = clEnqueueNDRangeKernel(
