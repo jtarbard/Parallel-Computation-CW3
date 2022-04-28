@@ -132,27 +132,38 @@ int main( int argc, char **argv )
     );
 
     indexSpaceSize[0] = N * N;
-    if (N > maxWorkItems)
+    if (N < maxWorkItems)
     {
-	    workGroupSize[0] = maxWorkItems;
+        workGroupSize[0] = N;
+        //enqueue with N workgroup size
+        status = clEnqueueNDRangeKernel(
+            queue,
+            kernel,
+            1,
+            NULL,
+            indexSpaceSize,
+            workGroupSize,
+            0,
+            NULL,
+            NULL
+        );
     }
     else
     {
-	    workGroupSize[0] = N;
+        //enqueue with null workgroup size
+        status = clEnqueueNDRangeKernel(
+            queue,
+            kernel,
+            1,
+            NULL,
+            indexSpaceSize,
+            NULL,
+            0,
+            NULL,
+            NULL
+        );
     }
 
-    //enqueue
-    status = clEnqueueNDRangeKernel(
-        queue,
-        kernel,
-        1,
-        NULL,
-        indexSpaceSize,
-        workGroupSize,
-        0,
-        NULL,
-        NULL
-    );
 
     if (status != CL_SUCCESS)
     {
