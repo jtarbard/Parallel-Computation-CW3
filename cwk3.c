@@ -50,7 +50,6 @@ int main( int argc, char **argv )
 
     // Allocate memory for the grid. For simplicity, this uses a one-dimensional array.
 	float *hostGrid = (float*) malloc( N * N * sizeof(float) );
-	float *newGrid = (float*) malloc( N * N * sizeof(float) );
 
 	// Fill the grid with some initial values, and display to stdout. fillGrid() is defined in the helper file.
     fillGrid( hostGrid, N );
@@ -164,14 +163,11 @@ int main( int argc, char **argv )
         );
     }
 
-
     if (status != CL_SUCCESS)
     {
 		printf( "Failure enqueuing kernel: Error %d.\n", status );
 		return EXIT_FAILURE;
 	}
-
-    //todo: error handling
 
     status = clEnqueueReadBuffer(
         queue,
@@ -205,7 +201,7 @@ int main( int argc, char **argv )
     clReleaseMemObject( hostGrid_buffer );
     clReleaseMemObject( newGrid_buffer );
     
-    clReleaseKernel( kernel );
+    clReleaseKernel      ( kernel );
     clReleaseCommandQueue( queue   );
     clReleaseContext     ( context );
 
